@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,6 +23,31 @@ interface ProductFiltersProps {
 const ProductFilters = ({ categories, filters, onFiltersChange, maxPrice }: ProductFiltersProps) => {
   const [localPriceRange, setLocalPriceRange] = useState(filters.priceRange);
 
+  // Debounced price update with proper cleanup
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (localPriceRange[0] !== filters.priceRange[0] || localPriceRange[1] !== filters.priceRange[1]) {
+        onFiltersChange({
+          ...filters,
+          priceRange: localPriceRange,
+        });
+      }
+    }, 300); // 300ms delay for smooth interaction
+
+    return () => clearTimeout(timeoutId);
+  }, [localPriceRange, filters, onFiltersChange]);
+
+  // Update local state immediately for responsive UI
+  const handlePriceChange = (value: number[]) => {
+    const newRange: [number, number] = [value[0], value[1]];
+    setLocalPriceRange(newRange);
+  };
+
+  // Sync local state when filters prop changes externally
+  useEffect(() => {
+    setLocalPriceRange(filters.priceRange);
+  }, [filters.priceRange]);
+
   const handleCategoryChange = (category: string, checked: boolean) => {
     const updatedCategories = checked
       ? [...filters.categories, category]
@@ -31,14 +56,6 @@ const ProductFilters = ({ categories, filters, onFiltersChange, maxPrice }: Prod
     onFiltersChange({
       ...filters,
       categories: updatedCategories,
-    });
-  };
-
-  const handlePriceChange = (value: number[]) => {
-    setLocalPriceRange([value[0], value[1]]);
-    onFiltersChange({
-      ...filters,
-      priceRange: [value[0], value[1]],
     });
   };
 
